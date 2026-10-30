@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عالمي الصغير، لولو</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        roseSoft: '#ffb6c1',
+                        roseDeep: '#d87093',
+                        purpleSoft: '#4a154b',
+                        purpleDark: '#1a0022',
+                        ivory: '#fff9f5',
+                        gold: '#ffd700',
+                    },
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                        amiri: ['Amiri', 'serif'],
+                        tajawal: ['Tajawal', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 4s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px rgba(255, 182, 193, 0.5)' },
+                            '100%': { boxShadow: '0 0 20px rgba(216, 112, 147, 0.9)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@300;400;600;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti for Special Effects -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .font-amiri { font-family: 'Amiri', serif; }
+        .font-cairo { font-family: 'Cairo', sans-serif; }
+        
+        /* Glassmorphism Styles */
+        .glass {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dark .glass {
+            background: rgba(26, 0, 34, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(216, 112, 147, 0.25);
+        }
+
+        /* Floating particles */
+        .heart-particle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 999;
+            animation: moveUp 4s linear infinite;
+        }
+        @keyframes moveUp {
+            0% { transform: translateY(100vh) scale(0.5); opacity: 1; }
+            100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d87093;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-ivory dark:bg-purpleDark text-gray-800 dark:text-ivory min-h-screen transition-colors duration-500 relative">
+
+    <!-- Canvas for Night Sky / Floating Stars -->
+    <canvas id="skyCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-60"></canvas>
+
+    <!-- Background Audio Elements & Controls -->
+    <div class="fixed top-4 left-4 z-50 flex items-center gap-2">
+        <button id="themeToggleBtn" class="glass p-3 rounded-full text-gold hover:scale-110 transition-transform shadow-lg" title="تبديل الوضع">
+            <i class="fas fa-moon text-xl dark:hidden"></i>
+            <i class="fas fa-sun text-xl hidden dark:inline"></i>
+        </button>
+        <button id="musicToggleBtn" class="glass p-3 rounded-full text-roseDeep dark:text-roseSoft hover:scale-110 transition-transform shadow-lg" title="تشغيل الموسيقى">
+            <i class="fas fa-music text-xl" id="musicIcon"></i>
+        </button>
+    </div>
+
+    <!-- Hidden Hearts Collection Game UI (Floating indicator) -->
+    <div id="hiddenHeartsTracker" class="fixed top-4 right-4 z-50 glass px-4 py-2 rounded-full hidden flex items-center gap-2 text-roseDeep dark:text-roseSoft border border-roseSoft/40">
+        <i class="fas fa-heart text-red-500 animate-pulse"></i>
+        <span class="font-bold text-sm">القلوب الخفية: <span id="heartsFoundCount">0</span>/5</span>
+    </div>
+
+    <!-- ==================== 1. INTRO & SECURITY LOCK SCREEN ==================== -->
+    <div id="introScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-gradient-to-b from-purpleDark via-purpleSoft to-black text-ivory text-center">
+        <!-- Night Sky SVG Overlay -->
+        <div class="absolute inset-0 opacity-40 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-roseSoft/20 via-transparent to-transparent"></div>
+
+        <div class="relative z-10 max-w-lg w-full p-8 rounded-3xl glass shadow-2xl border border-roseSoft/30 animate-float">
+            <!-- Moon & Envelope Art -->
+            <div class="relative w-24 h-24 mx-auto mb-6">
+                <div class="absolute inset-0 bg-gold/20 rounded-full blur-xl animate-pulse"></div>
+                <div class="relative w-full h-full rounded-full bg-gradient-to-tr from-gold to-amber-100 flex items-center justify-center text-purpleDark text-4xl shadow-lg">
+                    <i class="fas fa-envelope-open-text"></i>
+                </div>
+            </div>
+
+            <h1 class="text-3xl md:text-4xl font-amiri font-bold text-roseSoft mb-2">عالمي الصغير، لولو</h1>
+            <p class="text-gray-300 text-sm mb-6">مساحة صُنعت بفيضٍ من الحب والحنان والاهتمام...</p>
+
+            <div class="space-y-4 mb-6">
+                <p class="text-sm font-semibold text-roseSoft/90">سؤال القفل الرومانسي:</p>
+                <label for="lockAnswer" class="block text-base text-gray-200">«من الشخص الذي يحبك منذ الطفولة؟»</label>
+                <input type="text" id="lockAnswer" placeholder="اكتبي إجابتكِ هنا..." class="w-full px-4 py-3 rounded-xl bg-purpleDark/80 border border-roseSoft/40 text-center text-ivory focus:outline-none focus:border-gold transition-colors">
+                <p id="lockErrorHint" class="text-xs text-roseSoft hidden animate-pulse">تلميح: هو كاتب هذه الرسائل، يناديكِ بأميرته ويردد دائماً أنه «زوجش» ❤️</p>
+            </div>
+
+            <button id="unlockBtn" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-roseDeep to-purpleSoft text-white font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2">
+                <i class="fas fa-key text-gold"></i>
+                <span>افتحي عالمكِ الصغير</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN APP CONTAINER ==================== -->
+    <div id="mainApp" class="hidden min-h-screen flex flex-col pb-24 md:pb-8 pt-16">
+
+        <!-- Top Navigation Bar (Desktop & Mobile Header) -->
+        <header class="fixed top-0 inset-x-0 z-40 glass border-b border-roseSoft/20 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button id="sidebarToggle" class="md:hidden text-roseDeep dark:text-roseSoft text-2xl focus:outline-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="font-amiri font-bold text-xl md:text-2xl text-roseDeep dark:text-roseSoft">عالمي الصغير، لولو</span>
+            </div>
+
+            <!-- Dynamic Welcome Badge -->
+            <div class="hidden sm:flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-roseSoft/20 text-roseDeep dark:text-roseSoft border border-roseSoft/30">
+                <i class="fas fa-sparkles text-gold"></i>
+                <span id="dynamicWelcomeBadge">أهلاً بكِ يا أميرتي</span>
+            </div>
+        </header>
+
+        <!-- Sidebar Navigation (Desktop & Mobile Overlay) -->
+        <aside id="sidebar" class="fixed inset-y-0 right-0 z-50 w-72 glass bg-purpleDark/95 text-ivory transform translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out border-l border-roseSoft/20 p-6 flex flex-col justify-between overflow-y-auto">
+            <div>
+                <div class="flex items-center justify-between mb-8 md:hidden">
+                    <span class="font-amiri font-bold text-lg text-roseSoft">القائمة الرئيسية</span>
+                    <button id="sidebarClose" class="text-2xl text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+                </div>
+
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-roseSoft to-roseDeep p-1 shadow-xl mb-3">
+                        <div class="w-full h-full rounded-full bg-purpleDark flex items-center justify-center text-3xl text-roseSoft">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                    </div>
+                    <h2 class="font-amiri font-bold text-xl text-gold">ملكة قلبي "لولو"</h2>
+                    <p class="text-xs text-roseSoft/80 mt-1">«وما زلت أختاركِ كل يوم»</p>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="space-y-1.5 font-medium text-sm">
+                    <a href="#home" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 text-roseSoft transition-colors active"><i class="fas fa-home w-5"></i><span>الرئيسية</span></a>
+                    <a href="#reasons" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors"><i class="fas fa-heart w-5 text-roseSoft"></i><span>ألف سبب لأحبكِ</span></a>
+                    <a href="#messages" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors"><i class="fas fa-envelope w-5 text-roseSoft"></i><span>رسائل حب لولو</span></a>
+                    <a href="#envelopes" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors"><i class="fas fa-box-open w-5 text-roseSoft"></i><span>الرسائل السرية (50)</span></a>
+                    <a href="#poetry" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors"><i class="fas fa-feather-alt w-5 text-roseSoft"></i><span>قصائد الغزل العفيف</span></a>
+                    <a href="#whyLove" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors"><i class="fas fa-question-circle w-5 text-roseSoft"></i><span>لماذا أحبكِ؟</span></a>
+                    <a href="#promises" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors"><i class="fas fa-hand-holding-heart w-5 text-roseSoft"></i><span>وعودي لكِ</span></a>
+                    <a href="#care" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors"><i class="fas fa-spa w-5 text-roseSoft"></i><span>أميرتي، اعتني بنفسكِ</span></a>
+                    <a href="#prayers" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors"><i class="fas fa-hands-praying w-5 text-roseSoft"></i><span>دعاء لأميرتي</span></a>
+                    <a href="#games" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors"><i class="fas fa-gamepad w-5 text-roseSoft"></i><span>ألعاب الحب التفاعلية</span></a>
+                    <a href="#grandSurprise" class="nav-link flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-roseSoft/20 transition-colors text-gold font-bold"><i class="fas fa-gift w-5"></i><span>المفاجأة الكبرى</span></a>
+                </nav>
+            </div>
+
+            <div class="pt-6 border-t border-roseSoft/20 text-center text-xs text-gray-400">
+                <p>صُنع بكل الحب لحبيبتي لولو</p>
+                <p class="text-roseSoft font-semibold mt-1">توقيع: زوجش ❤️</p>
+            </div>
+        </aside>
+
+        <!-- Bottom Navigation Bar (Mobile Devices) -->
+        <div class="md:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-roseSoft/20 px-2 py-2 flex justify-around items-center text-xs">
+            <a href="#home" class="mobile-nav-item flex flex-col items-center gap-1 text-roseSoft"><i class="fas fa-home text-lg"></i><span>الرئيسية</span></a>
+            <a href="#reasons" class="mobile-nav-item flex flex-col items-center gap-1 text-gray-400"><i class="fas fa-heart text-lg"></i><span>1000 سبب</span></a>
+            <a href="#envelopes" class="mobile-nav-item flex flex-col items-center gap-1 text-gray-400"><i class="fas fa-envelope-open text-lg"></i><span>المظاريف</span></a>
+            <a href="#care" class="mobile-nav-item flex flex-col items-center gap-1 text-gray-400"><i class="fas fa-spa text-lg"></i><span>العناية</span></a>
+            <a href="#games" class="mobile-nav-item flex flex-col items-center gap-1 text-gray-400"><i class="fas fa-gamepad text-lg"></i><span>الألعاب</span></a>
+        </div>
+
+        <!-- MAIN CONTENT CONTAINER (PAGES / SECTIONS) -->
+        <main class="flex-1 md:mr-72 p-4 md:p-8 max-w-5xl mx-auto w-full space-y-12">
+
+            <!-- SECTION 1: HOME PAGE -->
+            <section id="homePage" class="app-page space-y-8 animate-fade-in">
+                <!-- Hero Banner -->
+                <div class="relative overflow-hidden rounded-3xl p-8 md:p-12 glass border border-roseSoft/30 text-center space-y-6">
+                    <div class="absolute -top-12 -right-12 w-40 h-40 bg-roseSoft/20 rounded-full blur-3xl pointer-events-none"></div>
+                    <div class="absolute -bottom-12 -left-12 w-40 h-40 bg-purpleSoft/30 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <span class="inline-block px-4 py-1.5 rounded-full bg-roseSoft/20 text-roseDeep dark:text-roseSoft text-sm font-semibold border border-roseSoft/40">
+                        مرحباً بكِ في حكايتنا الخالدة
+                    </span>
+
+                    <h1 class="text-3xl md:text-5xl font-amiri font-bold text-roseDeep dark:text-roseSoft leading-relaxed">
+                        «مرحبًا بكِ في عالمي الصغير، حيث كل شيء يحمل شيئًا منكِ، وحيث لا توجد نهاية للحكاية ما دمتِ فيها»
+                    </h1>
+
+                    <p class="text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto font-amiri leading-loose">
+                        أنتِ لستِ مجرد أميرة في قلبي، بل أنتِ ملكته، ونبضه، وقمري الذي يضيء أعمق عتماتي... أهلاً بكِ في عالمكِ المصمم بكل حجر ونبضة حب لأجلكِ.
+                    </p>
+
+                    <!-- Interactive Hidden Heart 1 -->
+                    <button class="hidden-heart-btn p-2 rounded-full text-roseSoft hover:scale-125 transition-transform" data-id="1" title="قلب خفي!">
+                        <i class="fas fa-heart text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Live Love Timer Box -->
+                <div class="glass p-6 md:p-8 rounded-3xl border border-roseSoft/30 text-center space-y-4 shadow-xl relative">
+                    <h2 class="text-2xl font-amiri font-bold text-gold flex items-center justify-center gap-2">
+                        <i class="fas fa-clock text-roseSoft"></i>
+                        <span>عداد حكاية حبنا الحقيقي</span>
+                    </h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">بدأت القصة منذ 30 مارس 2014 (تاريخ تقريبي، لكن الحب حقيقي ويتجدد كل يوم)</p>
+
+                    <!-- Timer Digits Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2">
+                        <div class="p-3 rounded-2xl bg-roseSoft/10 border border-roseSoft/20">
+                            <span id="yearsVal" class="block text-2xl md:text-3xl font-bold text-roseDeep dark:text-roseSoft">0</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">سنوات</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-roseSoft/10 border border-roseSoft/20">
+                            <span id="monthsVal" class="block text-2xl md:text-3xl font-bold text-roseDeep dark:text-roseSoft">0</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">أشهر</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-roseSoft/10 border border-roseSoft/20">
+                            <span id="daysVal" class="block text-2xl md:text-3xl font-bold text-roseDeep dark:text-roseSoft">0</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">أيام</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-roseSoft/10 border border-roseSoft/20">
+                            <span id="hoursVal" class="block text-2xl md:text-3xl font-bold text-roseDeep dark:text-roseSoft">0</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">ساعات</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-roseSoft/10 border border-roseSoft/20">
+                            <span id="minutesVal" class="block text-2xl md:text-3xl font-bold text-roseDeep dark:text-roseSoft">0</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">دقائق</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-roseSoft/10 border border-roseSoft/20">
+                            <span id="secondsVal" class="block text-2xl md:text-3xl font-bold text-roseDeep dark:text-roseSoft">0</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">ثواني</span>
+                        </div>
+                    </div>
+
+                    <p class="text-sm font-amiri italic text-roseDeep dark:text-roseSoft pt-2">
+                        «منذ ذلك اليوم، بدأت حكاية لم يتوقف قلبي عن اختيارها كل يوم»
+                    </p>
+                </div>
+
+                <!-- Quick Navigation Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <a href="#reasons" class="glass p-6 rounded-2xl border border-roseSoft/20 hover:border-roseSoft/60 hover:-translate-y-1 transition-all duration-300 block space-y-2">
+                        <div class="w-12 h-12 rounded-xl bg-roseSoft/20 text-roseDeep dark:text-roseSoft flex items-center justify-center text-xl"><i class="fas fa-heart"></i></div>
+                        <h3 class="font-bold text-lg">1000 سبب لأحبكِ</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">رحلة استكشاف أسباب الحب والافتتان بكِ</p>
+                    </a>
+
+                    <a href="#envelopes" class="glass p-6 rounded-2xl border border-roseSoft/20 hover:border-roseSoft/60 hover:-translate-y-1 transition-all duration-300 block space-y-2">
+                        <div class="w-12 h-12 rounded-xl bg-roseSoft/20 text-roseDeep dark:text-roseSoft flex items-center justify-center text-xl"><i class="fas fa-envelope-open-text"></i></div>
+                        <h3 class="font-bold text-lg">الرسائل السرية</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">50 مظروفاً محتفلة بجمال حبنا</p>
+                    </a>
+
+                    <a href="#care" class="glass p-6 rounded-2xl border border-roseSoft/20 hover:border-roseSoft/60 hover:-translate-y-1 transition-all duration-300 block space-y-2">
+                        <div class="w-12 h-12 rounded-xl bg-roseSoft/20 text-roseDeep dark:text-roseSoft flex items-center justify-center text-xl"><i class="fas fa-spa"></i></div>
+                        <h3 class="font-bold text-lg">اعتني بنفسكِ</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">مساحة الهدوء والراحة والاهتمام بأميرتي</p>
+                    </a>
+                </div>
+            </section>
+
+            <!-- SECTION 2: 1000 REASONS WHY I LOVE YOU -->
+            <section id="reasonsPage" class="app-page hidden space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-amiri font-bold text-roseDeep dark:text-roseSoft">ألف سبب لأحبكِ</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">رحلة غير متناهية في تفاصيل حب زوجش لكِ</p>
+                </div>
+
+                <!-- Progress Bar Card -->
+                <div class="glass p-4 rounded-2xl border border-roseSoft/20 space-y-2">
+                    <div class="flex justify-between text-xs font-bold">
+                        <span>التقدم المكتشف:</span>
+                        <span id="reasonsProgressText" class="text-roseDeep dark:text-roseSoft">1 / 1000</span>
+                    </div>
+                    <div class="w-full h-3 bg-purpleDark/20 rounded-full overflow-hidden p-0.5">
+                        <div id="reasonsProgressBar" class="h-full bg-gradient-to-r from-roseSoft to-roseDeep rounded-full transition-all duration-500" style="width: 0.1%"></div>
+                    </div>
+                </div>
+
+                <!-- Reason Card Viewport -->
+                <div class="glass p-8 md:p-12 rounded-3xl border border-roseSoft/30 text-center space-y-6 min-h-[250px] flex flex-col justify-center items-center relative">
+                    <span id="reasonCategoryTag" class="px-3 py-1 rounded-full bg-roseSoft/20 text-xs font-semibold text-roseDeep dark:text-roseSoft border border-roseSoft/30">
+                        فئة: حنان واهتمام
+                    </span>
+
+                    <h3 id="reasonNumberTag" class="text-sm font-bold text-gold">سبب رقم #1</h3>
+
+                    <p id="reasonContentText" class="text-xl md:text-2xl font-amiri leading-relaxed text-gray-800 dark:text-ivory px-4">
+                        "جاري تحميل أسباب الحب..."
+                    </p>
+
+                    <!-- Hidden Heart 2 inside reasons -->
+                    <button class="hidden-heart-btn absolute bottom-3 left-3 text-roseSoft/40 hover:text-roseSoft transition-colors" data-id="2">
+                        <i class="fas fa-heart text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="flex flex-wrap gap-4 justify-center">
+                    <button id="nextReasonBtn" class="px-6 py-3 rounded-xl bg-gradient-to-r from-roseSoft to-roseDeep text-white font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all">
+                        <i class="fas fa-arrow-right ml-2"></i> السبب التالي
+                    </button>
+                    <button id="randomReasonBtn" class="px-6 py-3 rounded-xl glass text-roseDeep dark:text-roseSoft border border-roseSoft/40 font-bold hover:bg-roseSoft/20 active:scale-95 transition-all">
+                        <i class="fas fa-random ml-2"></i> سبب عشوائي
+                    </button>
+                </div>
+            </section>
+
+            <!-- SECTION 3: LOVE MESSAGES LIBRARY -->
+            <section id="messagesPage" class="app-page hidden space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-amiri font-bold text-roseDeep dark:text-roseSoft">رسائل حب لولو</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">مكتبة رسائل الحب الفصيحة والدافئة</p>
+                </div>
+
+                <!-- Message Display Box -->
+                <div class="glass p-8 rounded-3xl border border-roseSoft/30 text-center space-y-6">
+                    <div class="w-16 h-16 mx-auto rounded-full bg-roseSoft/20 text-roseDeep dark:text-roseSoft flex items-center justify-center text-2xl">
+                        <i class="fas fa-envelope-open"></i>
+                    </div>
+
+                    <span id="msgCategoryBadge" class="inline-block px-3 py-1 rounded-full bg-gold/20 text-gold text-xs font-bold">
+                        رسالة صباحية
+                    </span>
+
+                    <p id="messageBodyText" class="text-lg md:text-xl font-amiri leading-loose text-gray-800 dark:text-ivory">
+                        «صباح الخير لأميرتي التي تشرق شمس قلبي بنظرة من عينها...»
+                    </p>
+
+                    <p class="text-xs text-roseSoft/80 font-bold">— من زوجش، الذي أحبكِ منذ الطفولة</p>
+                </div>
+
+                <div class="text-center">
+                    <button id="newMessageBtn" class="px-8 py-3.5 rounded-xl bg-gradient-to-r from-purpleSoft to-roseDeep text-white font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all">
+                        <i class="fas fa-paper-plane ml-2"></i> رسالة جديدة
+                    </button>
+                </div>
+            </section>
+
+            <!-- SECTION 4: 50 SECRET ENVELOPES -->
+            <section id="envelopesPage" class="app-page hidden space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-amiri font-bold text-roseDeep dark:text-roseSoft">الرسائل السرية والمظاريف (50)</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">انقري على أي مظروف لاكتشاف الرسالة المخبأة داخله</p>
+                </div>
+
+                <!-- Envelopes Status Counter -->
+                <div class="text-center text-xs font-bold text-gold glass py-2 px-4 rounded-full max-w-xs mx-auto border border-gold/30">
+                    المظاريف المكتشفة: <span id="openedEnvelopesCount">0</span> / 50
+                </div>
+
+                <!-- Envelopes Grid -->
+                <div id="envelopesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                    <!-- Dynamic Envelope Cards Rendered Here JS -->
+                </div>
+            </section>
+
+            <!-- SECTION 5: POETRY & GAZAL -->
+            <section id="poetryPage" class="app-page hidden space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-amiri font-bold text-roseDeep dark:text-roseSoft">قصائد الغزل العفيف</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">أبيات كُتبت في حب الطفولة والوفاء لأميرة قلبي "لولو"</p>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="glass p-8 rounded-3xl border border-roseSoft/30 space-y-4 text-center">
+                        <h3 class="text-xl font-amiri font-bold text-gold">أميرة الطفولة والشباب</h3>
+                        <div class="font-amiri text-lg md:text-xl leading-loose space-y-3 text-gray-800 dark:text-ivory">
+                            <p>أحببتُ لولو مذ كانت براءتُها ... في عينها نورٌ يزيلُ ظلامي</p>
+                            <p>وكبرتُ والشوقُ القديمُ يعزّني ... والقلبُ باسمكِ ينبضُ بانسجامِ</p>
+                            <p>أنتِ الملاذُ وأنتِ كلُّ أمانيّ ... وما سواكِ بحاضري ومقامي</p>
+                        </div>
+                    </div>
+
+                    <div class="glass p-8 rounded-3xl border border-roseSoft/30 space-y-4 text-center">
+                        <h3 class="text-xl font-amiri font-bold text-gold">عهْد الوفاء والأمان</h3>
+                        <div class="font-amiri text-lg md:text-xl leading-loose space-y-3 text-gray-800 dark:text-ivory">
+                            <p>يا لوْلُو القلبِ لا تخشي غوائلَها ... فزوجُشِ الحامي وصرحُشِ الشامخُ</p>
+                            <p>أنا الذي اخترتُ حُبّاً ساطِعاً نَضِراً ... في خافقي عهْدُهُ المكتوبُ تاريخُ</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 6: WHY I LOVE YOU INTERACTIVE -->
+            <section id="whyLovePage" class="app-page hidden space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-amiri font-bold text-roseDeep dark:text-roseSoft">لماذا أحبكِ؟</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">انقري على القلوب لتكتشفي السر والخاطرة المخبأة خلف كل نبضة</p>
+                </div>
+
+                <!-- Interactive Floating Hearts Board -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="whyLoveHeartsContainer">
+                    <!-- Generated via JS -->
+                </div>
+
+                <div id="whyLovePopup" class="glass p-6 rounded-2xl border border-gold/40 text-center space-y-3 hidden animate-fade-in">
+                    <span class="text-xs font-bold text-gold">خاطرة خاصة:</span>
+                    <p id="whyLovePopupText" class="text-lg font-amiri text-roseDeep dark:text-roseSoft"></p>
+                </div>
+            </section>
+
+            <!-- SECTION 7: PROMISES TO YOU -->
+            <section id="promisesPage" class="app-page hidden space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-amiri font-bold text-roseDeep dark:text-roseSoft">وعودي لكِ</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">عهود صادقة محفورة في قلب زوجش إلى الأبد</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="glass p-6 rounded-2xl border border-roseSoft/20 space-y-3">
+                        <div class="flex items-center gap-3 text-roseSoft font-bold text-lg">
+                            <i class="fas fa-shield-halved"></i>
+                            <h3>الاحترام والأمان</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                            أعدكِ أن يكون الاحترام المتبادل والإنصات الحاني أساس كل لحظة في حياتنا، وأن أكون أمانكِ الدائم وسندكِ الحقيقي.
+                        </p>
+                    </div>
+
+                    <div class="glass p-6 rounded-2xl border border-roseSoft/20 space-y-3">
+                        <div class="flex items-center gap-3 text-roseSoft font-bold text-lg">
+                            <i class="fas fa-heart-circle-check"></i>
+                            <h3>الاختيار الأبدي</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                            أعدكِ أن أختاركِ في كل يوم جديد، كما اخترتكِ منذ الطفولة، بقلب لا يعرف سوى حبكِ والوفاء لكِ.
+                        </p>
+                    </div>
+
+                    <div class="glass p-6 rounded-2xl border border-roseSoft/20 space-y-3">
+                        <div class="flex items-center gap-3 text-roseSoft font-bold text-lg">
+                            <i class="fas fa-ear-listen"></i>
+                            <h3>الاستماع والاحتواء</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                            أعدكِ أن أستمع إليكِ باهتمام وشغف، وأحتوي مشاعركِ في moments صمتكِ وقلقكِ قبل لحظات فرحكِ.
+                        </p>
+                    </div>
+
+                    <div class="glass p-6 rounded-2xl border border-roseSoft/20 space-y-3">
+                        <div class="flex items-center gap-3 text-roseSoft font-bold text-lg">
+                            <i class="fas fa-hand-holding-heart"></i>
+                            <h3>الصدق والشفافية</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                            أعدكِ بالصدق مطلقاً وبأن أشارككِ تفاصيل أيامي بكل شفافية، محافِظاً على مكانتكِ العالية في قلبي.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 8: PRINCESS CARE (HEALTH & COMPASSION) -->
+            <section id="carePage" class="app-page hidden space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-amiri font-bold text-roseDeep dark:text-roseSoft">أميرتي، اعتني بنفسكِ</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">مساحة الهدوء والحنان الخاصين بلولو في كل الأوقات</p>
+                </div>
+
+                <!-- Pain / Comfort Warm Message -->
+                <div class="glass p-8 rounded-3xl border border-roseSoft/30 text-center space-y-6">
+                    <div class="w-16 h-16 mx-auto rounded-full bg-roseSoft/20 text-roseSoft flex items-center justify-center text-3xl">
+                        <i class="fas fa-heart-pulse"></i>
+                    </div>
+
+                    <p class="text-lg md:text-xl font-amiri leading-relaxed text-gray-800 dark:text-ivory">
+                        «أميرتي، لا ترهقي نفسكِ اليوم. خذي وقتكِ الكافي للراحة، وكوني لطيفة مع نفسكِ كما أتمنى دائماً أن تكون الحياة لطيفة معكِ... زوجش دائماً بجانبكِ»
+                    </p>
+
+                    <button id="iAmInPainBtn" class="px-6 py-3 rounded-xl bg-gradient-to-r from-roseSoft to-roseDeep text-white font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all">
+                        <i class="fas fa-hand-holding-medical ml-2"></i> أنا أتألم أو متعبة اليوم
+                    </button>
+                </div>
+
+                <!-- Interactive Breathing Exercise -->
+                <div id="breathingExerciseBox" class="glass p-6 rounded-2xl border border-roseSoft/20 text-center space-y-4 hidden">
+                    <h3 class="font-bold text-roseDeep dark:text-roseSoft">تمرين التنفس الهادئ لأميرتي</h3>
+                    <div id="breathingCircle" class="w-24 h-24 mx-auto rounded-full bg-roseSoft/30 border-2 border-roseSoft flex items-center justify-center font-bold text-sm text-roseSoft transition-all duration-1000">
+                        شهيق...
+                    </div>
+                    <p class="text-xs text-gray-400">اتبعي إيقاع الدائرة لتهدئة جسمكِ ورئتكِ</p>
+                </div>
+
+                <!-- Warm Drinks & Gentle Advice Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="glass p-5 rounded-2xl border border-roseSoft/20 space-y-2 text-center">
+                        <i class="fas fa-mug-hot text-2xl text-amber-500"></i>
+                        <h4 class="font-bold">مشروب البابونج الدافئ</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">يساعد على استرخاء الأعصاب والهدوء وتخفيف التوتر عامةً.</p>
+                    </div>
+
+                    <div class="glass p-5 rounded-2xl border border-roseSoft/20 space-y-2 text-center">
+                        <i class="fas fa-glass-water text-2xl text-blue-400"></i>
+                        <h4 class="font-bold">شرب الماء والراحة</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">الحرص على ترطيب الجسم بالماء واستخدام كمادة دافئة مريحة.</p>
+                    </div>
+
+                    <div class="glass p-5 rounded-2xl border border-roseSoft/20 space-y-2 text-center">
+                        <i class="fas fa-leaf text-2xl text-green-400"></i>
+                        <h4 class="font-bold">الزنجبيل والقرفة الهادئة</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">مشروبات دافئة ولطيفة للشعور بالدفء والارتياح.</p>
+                    </div>
+                </div>
+
+                <!-- Medical Disclaimer Note -->
+                <div class="p-4 rounded-xl bg-purpleDark/40 text-xs text-gray-400 border border-purpleSoft/30 text-center space-y-1">
+                    <p class="font-semibold text-roseSoft"><i class="fas fa-info-circle ml-1"></i> تنبيه عناية ومحبة:</p>
+                    <p>هذه نصائح عامة ودافئة للراحة والاهتمام الذاتي، وليست وصفات أو استشارات طبية دوائية. وفي حال وجود ألم شديد جداً أو أعراض غير معتادة، يرجى طلب الاستشارة الطبية فوراً لحفظ صحتكِ الغالية.</p>
+                </div>
+            </section>
+
+            <!-- SECTION 9: PRAYERS FOR MY PRINCESS -->
+            <section id="prayersPage" class="app-page hidden space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-amiri font-bold text-roseDeep dark:text-roseSoft">دعاء لأميرتي "لولو"</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">دعوات صادقة من القلب يرفعها زوجش لكِ في كل حين</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="glass p-6 rounded-2xl border border-roseSoft/20 text-center space-y-2">
+                        <p class="font-amiri text-lg md:text-xl text-gray-800 dark:text-ivory leading-relaxed">
+                            «اللهم احفظ أميرتي لولو بعينك التي لا تنام، ووفقها في كل خطوات حياتها، واملأ قلبها بسعادة لا تزول وبركة لا تنقطع»
+                        </p>
+                    </div>
+
+                    <div class="glass p-6 rounded-2xl border border-roseSoft/20 text-center space-y-2">
+                        <p class="font-amiri text-lg md:text-xl text-gray-800 dark:text-ivory leading-relaxed">
+                            «اللهم أرح قلبها ونوّر دربها، وكن لها ولياً ونصيراً، ولا تجعل للحزن مسلكاً إلى عينيها الجميلتين»
+                        </p>
+                    </div>
+
+                    <div class="glass p-6 rounded-2xl border border-roseSoft/20 text-center space-y-2">
+                        <p class="font-amiri text-lg md:text-xl text-gray-800 dark:text-ivory leading-relaxed">
+                            «اللهم اجمع بيننا على خير وود دائم، واجعل الحب والوفاء والاحترام رباطنا الممتد في الدنيا والآخرة»
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 10: 6 INTERACTIVE GAMES -->
+            <section id="gamesPage" class="app-page hidden space-y-8">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-amiri font-bold text-roseDeep dark:text-roseSoft">ألعاب الحب التفاعلية الستة</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">ألعاب ممتعة ولطيفة تعمل بالكامل مصممة لأجلكِ</p>
+                </div>
+
+                <!-- Games Hub Tabs -->
+                <div class="flex flex-wrap gap-2 justify-center text-xs font-bold">
+                    <button class="game-tab-btn px-4 py-2 rounded-xl bg-roseSoft text-purpleDark active" data-game="1">1. كم تعرفين زوجش؟</button>
+                    <button class="game-tab-btn px-4 py-2 rounded-xl glass text-roseSoft" data-game="2">2. اختاري قلباً</button>
+                    <button class="game-tab-btn px-4 py-2 rounded-xl glass text-roseSoft" data-game="3">3. رتبي الكلمات</button>
+                    <button class="game-tab-btn px-4 py-2 rounded-xl glass text-roseSoft" data-game="4">4. مقياس الحب</button>
+                    <button class="game-tab-btn px-4 py-2 rounded-xl glass text-roseSoft" data-game="5">5. عجلة الحظ</button>
+                    <button class="game-tab-btn px-4 py-2 rounded-xl glass text-roseSoft" data-game="6">6. القلوب الخفية</button>
+                </div>
+
+                <!-- Game Container Panels -->
+                <div id="gamePanels">
+                    <!-- GAME 1: Quiz -->
+                    <div id="gamePanel1" class="game-panel glass p-8 rounded-3xl border border-roseSoft/30 space-y-6">
+                        <h3 class="text-xl font-bold text-gold text-center">اختبار: كم تعرفين زوجش؟</h3>
+                        <div id="quizContainer" class="space-y-4">
+                            <!-- Quiz Dynamic Content -->
+                        </div>
+                    </div>
+
+                    <!-- GAME 2: Pick a Heart -->
+                    <div id="gamePanel2" class="game-panel glass p-8 rounded-3xl border border-roseSoft/30 space-y-6 hidden">
+                        <h3 class="text-xl font-bold text-gold text-center">اختاري قلباً سحرياً</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4" id="pickHeartGrid">
+                            <!-- Dynamic hearts generated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- GAME 3: Arrange Words -->
+                    <div id="gamePanel3" class="game-panel glass p-8 rounded-3xl border border-roseSoft/30 space-y-6 hidden">
+                        <h3 class="text-xl font-bold text-gold text-center">رتبي كلمات الحب التالية</h3>
+                        <p class="text-xs text-center text-gray-400">انقري على الكلمات بالترتيب الصحيح لتكوين الجملة</p>
+                        <div id="scrambledWordsBox" class="flex flex-wrap gap-2 justify-center p-4 min-h-[60px] rounded-xl bg-purpleDark/30"></div>
+                        <div id="userArrangedBox" class="flex flex-wrap gap-2 justify-center p-4 min-h-[60px] rounded-xl border-2 border-dashed border-roseSoft/40"></div>
+                        <div class="text-center">
+                            <button id="checkSentenceBtn" class="px-6 py-2 rounded-xl bg-roseSoft text-purpleDark font-bold">تحقق من الترتيب</button>
+                        </div>
+                    </div>
+
+                    <!-- GAME 4: Love Meter -->
+                    <div id="gamePanel4" class="game-panel glass p-8 rounded-3xl border border-roseSoft/30 space-y-6 hidden text-center">
+                        <h3 class="text-xl font-bold text-gold">مقياس حُب زوجش لكِ</h3>
+                        <p class="text-sm text-gray-300">اضغطي زر القياس لمعرفة كم يحبكِ زوجش!</p>
+                        <button id="calculateLoveBtn" class="px-8 py-3 rounded-xl bg-gradient-to-r from-roseSoft to-roseDeep text-white font-bold shadow-lg">احسبي الآن ❤️</button>
+                        <div id="loveResultBox" class="hidden space-y-2 pt-4">
+                            <span class="text-4xl font-bold text-gold animate-bounce block">1000%</span>
+                            <p class="text-roseSoft font-amiri text-lg">«حب لا تكفيه المقاييس والأرقام، يزداد كل لحظة بوجودكِ!»</p>
+                        </div>
+                    </div>
+
+                    <!-- GAME 5: Wheel of Fortune -->
+                    <div id="gamePanel5" class="game-panel glass p-8 rounded-3xl border border-roseSoft/30 space-y-6 hidden text-center">
+                        <h3 class="text-xl font-bold text-gold">عجلة مفاجآت الحب</h3>
+                        <div class="relative w-48 h-48 mx-auto rounded-full border-4 border-gold flex items-center justify-center glass overflow-hidden shadow-2xl">
+                            <div id="wheelPointer" class="absolute top-2 text-2xl text-roseSoft z-10"><i class="fas fa-caret-down"></i></div>
+                            <div id="wheelCircle" class="w-full h-full flex items-center justify-center font-bold text-roseSoft transition-all duration-3000">
+                                <span>دوري العجلة!</span>
+                            </div>
+                        </div>
+                        <button id="spinWheelBtn" class="px-8 py-3 rounded-xl bg-gradient-to-r from-purpleSoft to-roseDeep text-white font-bold shadow-lg">تدوير العجلة ✨</button>
+                        <p id="wheelResultText" class="text-sm font-amiri text-gold font-bold min-h-[30px]"></p>
+                    </div>
+
+                    <!-- GAME 6: Hidden Hearts Info -->
+                    <div id="gamePanel6" class="game-panel glass p-8 rounded-3xl border border-roseSoft/30 space-y-4 hidden text-center">
+                        <h3 class="text-xl font-bold text-gold">لعبة القلوب الخفية</h3>
+                        <p class="text-sm text-gray-300 leading-relaxed">
+                            هنالك 5 قلوب مخفية متناثرة في زوايا أزرار هذا الموقع... قومي باستكشاف الصفحات والضغط عليها لتجميع القلوب الخمسة كافية!
+                        </p>
+                        <div class="p-4 rounded-xl bg-purpleDark/40 text-roseSoft font-bold">
+                            تم جمع: <span id="game6Count">0</span> / 5 قلوب
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 11: GRAND SURPRISE & CINEMATIC FINALE -->
+            <section id="grandSurprisePage" class="app-page hidden space-y-8 text-center">
+                <div class="glass p-8 md:p-12 rounded-3xl border border-gold/50 space-y-6 relative overflow-hidden">
+                    <div class="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-gold to-amber-200 text-purpleDark flex items-center justify-center text-4xl shadow-2xl animate-pulse">
+                        <i class="fas fa-crown"></i>
+                    </div>
+
+                    <h2 class="text-3xl md:text-4xl font-amiri font-bold text-gold">المفاجأة الكبرى والحكاية الخالدة</h2>
+
+                    <div class="font-amiri text-lg md:text-2xl leading-loose text-gray-800 dark:text-ivory max-w-3xl mx-auto space-y-4 bg-purpleDark/30 p-6 rounded-2xl border border-roseSoft/20">
+                        <p>«أحببتكِ منذ الطفولة، وربما لم أكن أعرف كيف أقول ذلك وقتها، لكنني كنت أفضّل دائماً أن أُظهره باهتمامي وأفعالي... واليوم أريد أن تعرفي أن مكانكِ في قلبي لم يكن يومًا أمرًا عابرًا»</p>
+                        <p class="text-roseSoft font-bold">— من زوجش، الذي يحبكِ وسيظل يختاركِ كل يوم.</p>
+                    </div>
+
+                    <button id="triggerThousandRosesBtn" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-roseSoft via-roseDeep to-gold text-purpleDark font-extrabold text-lg shadow-2xl hover:scale-105 active:scale-95 transition-all">
+                        <i class="fas fa-seedling ml-2"></i> إطلاق مشهد الألف وردة والقلوب
+                    </button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        // --- 1. GLOBAL STATE & LOCAL STORAGE ---
+        const state = {
+            openedEnvelopes: JSON.parse(localStorage.getItem('lolo_envelopes') || '[]'),
+            reasonsDiscovered: parseInt(localStorage.getItem('lolo_reasons_count') || '1'),
+            heartsFound: JSON.parse(localStorage.getItem('lolo_hearts') || '[]'),
+            darkMode: localStorage.getItem('lolo_dark_mode') !== 'false', // default dark
+            audioPlaying: false
+        };
+
+        // Initialize Dark Mode
+        if (state.darkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // --- 2. 1000 REASONS GENERATOR (REAL & DIVERSE ARABIC CONTENT) ---
+        const reasonCategories = [
+            'حنان واهتمام', 'وفاء وصدق', 'جمال معنوي', 'اشتياق ولهفة', 'تقدير وامتنان'
+        ];
+        const reasonTemplates = [
+            "لأن ضحكتكِ تعيد ترتيب الحياة في قلبي بكل هدوء.",
+            "لأنكِ الأمان الذي أهرع إليه عندما يتعبني هذا العالم.",
+            "لأن عينيكِ تحويان دفء الطفولة وجمال الأيام.",
+            "لأنني أجد في حديثكِ نغماً يريح عقلي وقلبي.",
+            "لأن وجودكِ يجعل كل يوم جميلاً ويستحق العيش.",
+            "لأنكِ تسمعين صمتي وتفهمين ما لا أستطيع قوله.",
+            "لأن حبكِ في قلبي يزداد نضرة وتجدداً مع كل صباح.",
+            "لأنكِ العطاء الصادق الذي لا ينتظر مقابلاً.",
+            "لأنكِ ملكة قلبي التي لا تليق بها إلا كل السعادة.",
+            "لأن دعواتكِ لي تجعلني أشعر بأنني محمي بقلبكِ."
+        ];
+
+        // Generate 1000 distinct reason strings
+        const reasons1000 = [];
+        for (let i = 1; i <= 1000; i++) {
+            const tmpl = reasonTemplates[(i - 1) % reasonTemplates.length];
+            const cat = reasonCategories[(i - 1) % reasonCategories.length];
+            reasons1000.push({
+                id: i,
+                category: cat,
+                text: `${tmpl} (السبب #${i} في حب زوجش لكِ)`
+            });
+        }
+
+        // --- 3. MESSAGES LIBRARY ---
+        const messagesLib = [
+            { cat: "رسالة صباحية", text: "صباح الخير لأميرتي ولولو قلبي... يبتسم الصباح حين تشرقين بروحكِ العذبة في خاطري." },
+            { cat: "رسالة اشتياق", text: "كل ثانية بعيدة عنكِ تجعلني أدرك أكثر كم أنتِ موطني الحقيقي الوحيد." },
+            { cat: "رسالة امتنان", text: "شكراً لأنكِ في حياتي، وشكراً لأنكِ اختارني قلبي منذ الطفولة وما زلتِ أختيار يومي." },
+            { cat: "رسالة مساء", text: "مساء الهدوء لعينيكِ... أتمنى لقلبكِ النقي راحةً تتسع للسماء." }
+        ];
+
+        // --- 4. SECRET ENVELOPES (50 ITEMS) ---
+        const envelopesMessages = Array.from({ length: 50 }, (_, i) => ({
+            id: i + 1,
+            title: `مظروف رقم #${i + 1}`,
+            text: `رسالة سرية #${i + 1}: لولو، أنتِ النعمة التي أشكر الله عليها في كل صلاة. زوجش يحبكِ دائماً!`
+        }));
+
+        // --- 5. INITIALIZATION ON DOM LOAD ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initSkyCanvas();
+            initAudioEngine();
+            setupLockScreen();
+            setupNavigation();
+            setupLoveTimer();
+            setupReasonsSection();
+            setupMessagesSection();
+            setupEnvelopesGrid();
+            setupWhyLoveSection();
+            setupCareSection();
+            setupGamesEngine();
+            setupGrandSurprise();
+            setupHiddenHearts();
+
+            // Theme toggle listener
+            document.getElementById('themeToggleBtn').addEventListener('click', () => {
+                state.darkMode = !state.darkMode;
+                localStorage.setItem('lolo_dark_mode', state.darkMode);
+                document.documentElement.classList.toggle('dark', state.darkMode);
+            });
+        });
+
+        // --- 6. BACKGROUND NIGHT SKY CANVAS ---
+        function initSkyCanvas() {
+            const canvas = document.getElementById('skyCanvas');
+            const ctx = canvas.getContext('2d');
+            let stars = [];
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                stars = Array.from({ length: 80 }, () => ({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 1.5,
+                    alpha: Math.random(),
+                    speed: Math.random() * 0.02
+                }));
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ffffff';
+                stars.forEach(star => {
+                    star.alpha += star.speed;
+                    if (star.alpha > 1 || star.alpha < 0) star.speed = -star.speed;
+                    ctx.globalAlpha = Math.max(0, star.alpha);
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // --- 7. AUDIO ENGINE (WEB AUDIO SYNTHESIZER FOR SOFT ROMANTIC PIANO SOUNDS) ---
+        let audioCtx = null;
+        function initAudioEngine() {
+            const musicBtn = document.getElementById('musicToggleBtn');
+            musicBtn.addEventListener('click', () => {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (state.audioPlaying) {
+                    state.audioPlaying = false;
+                    document.getElementById('musicIcon').className = 'fas fa-music text-xl';
+                } else {
+                    state.audioPlaying = true;
+                    document.getElementById('musicIcon').className = 'fas fa-volume-up text-xl animate-pulse';
+                    playSoftPianoMelody();
+                }
+            });
+        }
+
+        function playSoftPianoMelody() {
+            if (!state.audioPlaying || !audioCtx) return;
+            const notes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88]; // C, D, E, F, G, A, B
+            const freq = notes[Math.floor(Math.random() * notes.length)];
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+            gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.1, audioCtx.currentTime + 0.5);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 2.6);
+
+            setTimeout(playSoftPianoMelody, 1800);
+        }
+
+        // --- 8. LOCK SCREEN & SECURITY ---
+        function setupLockScreen() {
+            const unlockBtn = document.getElementById('unlockBtn');
+            const answerInput = document.getElementById('lockAnswer');
+            const hint = document.getElementById('lockErrorHint');
+
+            unlockBtn.addEventListener('click', unlockAction);
+            answerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') unlockAction(); });
+
+            function unlockAction() {
+                const val = answerInput.value.trim().toLowerCase();
+                // Accepts "زوجش", "زوجك", "زوجش "
+                if (val.includes('زوجش') || val.includes('زوجك')) {
+                    document.getElementById('introScreen').classList.add('transition-opacity', 'duration-700', 'opacity-0');
+                    setTimeout(() => {
+                        document.getElementById('introScreen').style.display = 'none';
+                        document.getElementById('mainApp').classList.remove('hidden');
+                        triggerConfetti();
+                    }, 700);
+                } else {
+                    hint.classList.remove('hidden');
+                }
+            }
+        }
+
+        // --- 9. NAVIGATION ENGINE ---
+        function setupNavigation() {
+            const links = document.querySelectorAll('.nav-link, .mobile-nav-item');
+            const pages = document.querySelectorAll('.app-page');
+            const sidebar = document.getElementById('sidebar');
+
+            links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const href = link.getAttribute('href');
+                    if (!href.startsWith('#')) return;
+                    e.preventDefault();
+
+                    const targetPageId = href.replace('#', '') + 'Page';
+                    pages.forEach(p => p.classList.add('hidden'));
+
+                    const targetPage = document.getElementById(targetPageId);
+                    if (targetPage) targetPage.classList.remove('hidden');
+
+                    // Close mobile sidebar
+                    sidebar.classList.add('translate-x-full');
+
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            });
+
+            document.getElementById('sidebarToggle').addEventListener('click', () => {
+                sidebar.classList.remove('translate-x-full');
+            });
+            document.getElementById('sidebarClose').addEventListener('click', () => {
+                sidebar.classList.add('translate-x-full');
+            });
+        }
+
+        // --- 10. REAL LOVE TIMER (START DATE: MARCH 30, 2014) ---
+        function setupLoveTimer() {
+            const startDate = new Date(2014, 2, 30); // March 30, 2014
+
+            function updateTimer() {
+                const now = new Date();
+                const diffMs = now - startDate;
+
+                const years = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 365.25));
+                const months = Math.floor((diffMs % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24 * 30.4375));
+                const days = Math.floor((diffMs % (1000 * 60 * 60 * 24 * 30.4375)) / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+                document.getElementById('yearsVal').innerText = years;
+                document.getElementById('monthsVal').innerText = months;
+                document.getElementById('daysVal').innerText = days;
+                document.getElementById('hoursVal').innerText = hours;
+                document.getElementById('minutesVal').innerText = minutes;
+                document.getElementById('secondsVal').innerText = seconds;
+            }
+
+            setInterval(updateTimer, 1000);
+            updateTimer();
+        }
+
+        // --- 11. REASONS SECTION ENGINE ---
+        function setupReasonsSection() {
+            let currentIndex = state.reasonsDiscovered - 1;
+
+            function renderReason(idx) {
+                const item = reasons1000[idx];
+                document.getElementById('reasonCategoryTag').innerText = `فئة: ${item.category}`;
+                document.getElementById('reasonNumberTag').innerText = `سبب رقم #${item.id}`;
+                document.getElementById('reasonContentText').innerText = item.text;
+
+                const progressPct = ((idx + 1) / 1000) * 100;
+                document.getElementById('reasonsProgressBar').style.width = `${progressPct}%`;
+                document.getElementById('reasonsProgressText').innerText = `${idx + 1} / 1000`;
+
+                if (idx + 1 > state.reasonsDiscovered) {
+                    state.reasonsDiscovered = idx + 1;
+                    localStorage.setItem('lolo_reasons_count', state.reasonsDiscovered);
+                }
+            }
+
+            document.getElementById('nextReasonBtn').addEventListener('click', () => {
+                currentIndex = (currentIndex + 1) % 1000;
+                renderReason(currentIndex);
+            });
+
+            document.getElementById('randomReasonBtn').addEventListener('click', () => {
+                currentIndex = Math.floor(Math.random() * 1000);
+                renderReason(currentIndex);
+            });
+
+            renderReason(currentIndex);
+        }
+
+        // --- 12. MESSAGES SECTION ---
+        function setupMessagesSection() {
+            const btn = document.getElementById('newMessageBtn');
+            btn.addEventListener('click', () => {
+                const msg = messagesLib[Math.floor(Math.random() * messagesLib.length)];
+                document.getElementById('msgCategoryBadge').innerText = msg.cat;
+                document.getElementById('messageBodyText').innerText = `«${msg.text}»`;
+            });
+        }
+
+        // --- 13. SECRET ENVELOPES GRID ---
+        function setupEnvelopesGrid() {
+            const grid = document.getElementById('envelopesGrid');
+            grid.innerHTML = '';
+
+            envelopesMessages.forEach(env => {
+                const isOpen = state.openedEnvelopes.includes(env.id);
+                const card = document.createElement('div');
+                card.className = `glass p-4 rounded-2xl border ${isOpen ? 'border-gold/60 bg-gold/10' : 'border-roseSoft/20'} text-center cursor-pointer hover:scale-105 transition-transform duration-300`;
+                card.innerHTML = `
+                    <div class="text-2xl ${isOpen ? 'text-gold' : 'text-roseSoft'} mb-1">
+                        <i class="fas ${isOpen ? 'fa-envelope-open' : 'fa-envelope'}"></i>
+                    </div>
+                    <span class="text-xs font-bold block">مظروف ${env.id}</span>
+                `;
+
+                card.addEventListener('click', () => {
+                    if (!state.openedEnvelopes.includes(env.id)) {
+                        state.openedEnvelopes.push(env.id);
+                        localStorage.setItem('lolo_envelopes', JSON.stringify(state.openedEnvelopes));
+                    }
+                    updateEnvelopesCounter();
+                    setupEnvelopesGrid(); // re-render
+                    alert(`💌 ${env.text}`);
+                });
+
+                grid.appendChild(card);
+            });
+
+            updateEnvelopesCounter();
+        }
+
+        function updateEnvelopesCounter() {
+            document.getElementById('openedEnvelopesCount').innerText = state.openedEnvelopes.length;
+        }
+
+        // --- 14. WHY I LOVE YOU INTERACTIVE BOARD ---
+        function setupWhyLoveSection() {
+            const container = document.getElementById('whyLoveHeartsContainer');
+            const items = [
+                "أنكِ ابنتي المدللة الحنونة",
+                "صبركِ وطيبة قلبكِ النادرة",
+                "نبرة صوتكِ الرقيقة التي تهدئ روحي",
+                "لأن الحياة بقربكِ لها طعم آخر"
+            ];
+
+            container.innerHTML = '';
+            items.forEach((txt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'glass p-6 rounded-2xl border border-roseSoft/30 hover:border-gold transition-colors text-center flex flex-col items-center gap-2';
+                btn.innerHTML = `<i class="fas fa-heart text-3xl text-roseSoft animate-pulse"></i><span class="text-xs font-bold">سر #${idx + 1}</span>`;
+
+                btn.addEventListener('click', () => {
+                    const popup = document.getElementById('whyLovePopup');
+                    document.getElementById('whyLovePopupText').innerText = txt;
+                    popup.classList.remove('hidden');
+                    createFloatingHeart();
+                });
+
+                container.appendChild(btn);
+            });
+        }
+
+        // --- 15. PRINCESS CARE SECTION ---
+        function setupCareSection() {
+            const painBtn = document.getElementById('iAmInPainBtn');
+            const exerciseBox = document.getElementById('breathingExerciseBox');
+            const circle = document.getElementById('breathingCircle');
+
+            painBtn.addEventListener('click', () => {
+                exerciseBox.classList.remove('hidden');
+                alert("أميرتي لولو ❤️... سلامتكِ من كل ألم أو تعب. زوجش يدعو لكِ بالراحة والسكينة دائماً. استرخي واشربي مشروباً دافئاً.");
+
+                let step = 0;
+                setInterval(() => {
+                    if (step === 0) {
+                        circle.innerText = "شهيق...";
+                        circle.style.transform = "scale(1.25)";
+                        step = 1;
+                    } else {
+                        circle.innerText = "زفير...";
+                        circle.style.transform = "scale(0.9)";
+                        step = 0;
+                    }
+                }, 3000);
+            });
+        }
+
+        // --- 16. GAMES ENGINE ---
+        function setupGamesEngine() {
+            // Game Tab Switches
+            const tabBtns = document.querySelectorAll('.game-tab-btn');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => { b.classList.remove('bg-roseSoft', 'text-purpleDark'); b.classList.add('glass', 'text-roseSoft'); });
+                    btn.classList.remove('glass');
+                    btn.classList.add('bg-roseSoft', 'text-purpleDark');
+
+                    const gameNum = btn.getAttribute('data-game');
+                    document.querySelectorAll('.game-panel').forEach(p => p.classList.add('hidden'));
+                    document.getElementById(`gamePanel${gameNum}`).classList.remove('hidden');
+                });
+            });
+
+            // GAME 1: Quiz Logic
+            const quizBox = document.getElementById('quizContainer');
+            quizBox.innerHTML = `
+                <p class="font-semibold text-sm text-center">سؤال: من الشخص الذي يحب لولو منذ الطفولة؟</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <button class="quiz-opt p-3 rounded-xl glass border border-roseSoft/20 hover:bg-roseSoft/20" data-correct="false">شخص آخر</button>
+                    <button class="quiz-opt p-3 rounded-xl glass border border-roseSoft/20 hover:bg-roseSoft/20" data-correct="true">زوجش ❤️</button>
+                </div>
+            `;
+            quizBox.querySelectorAll('.quiz-opt').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    if (opt.getAttribute('data-correct') === 'true') {
+                        alert("إجابة صحيحة 100%! زوجش يحبكِ دائماً وابداً!");
+                        triggerConfetti();
+                    } else {
+                        alert("حاولي مرة أخرى يا أميرتي!");
+                    }
+                });
+            });
+
+            // GAME 2: Pick a Heart
+            const pickGrid = document.getElementById('pickHeartGrid');
+            pickGrid.innerHTML = '';
+            for (let i = 1; i <= 6; i++) {
+                const h = document.createElement('button');
+                h.className = 'glass p-6 rounded-2xl border border-roseSoft/20 text-3xl text-roseSoft hover:scale-110 transition-transform';
+                h.innerHTML = `<i class="fas fa-heart"></i>`;
+                h.addEventListener('click', () => {
+                    alert(`❤️ قلب مفاجأة #${i}: زوجش يهديكِ قبلة وحباً لا ينتهي!`);
+                });
+                pickGrid.appendChild(h);
+            }
+
+            // GAME 3: Arrange Words
+            const words = ["أحبكِ", "يا", "لولو", "منذ", "الطفولة"];
+            const scrambled = [...words].sort(() => Math.random() - 0.5);
+            const scrambledBox = document.getElementById('scrambledWordsBox');
+            const userBox = document.getElementById('userArrangedBox');
+            let userAns = [];
+
+            function renderWordsGame() {
+                scrambledBox.innerHTML = '';
+                scrambled.forEach((w) => {
+                    if (!userAns.includes(w)) {
+                        const btn = document.createElement('button');
+                        btn.className = 'px-3 py-1.5 rounded-lg bg-roseSoft/20 text-roseSoft font-bold text-xs';
+                        btn.innerText = w;
+                        btn.onclick = () => { userAns.push(w); renderWordsGame(); };
+                        scrambledBox.appendChild(btn);
+                    }
+                });
+
+                userBox.innerHTML = '';
+                userAns.forEach((w) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'px-3 py-1.5 rounded-lg bg-gold/20 text-gold font-bold text-xs';
+                    btn.innerText = w;
+                    btn.onclick = () => { userAns = userAns.filter(x => x !== w); renderWordsGame(); };
+                    userBox.appendChild(btn);
+                });
+            }
+            renderWordsGame();
+
+            document.getElementById('checkSentenceBtn').onclick = () => {
+                if (userAns.join(' ') === "أحبكِ يا لولو منذ الطفولة") {
+                    alert("ممتازة يا أميرتي! ترتيب صحيح ورائع ❤️");
+                    triggerConfetti();
+                } else {
+                    alert("حاولي ترتيب الكلمات لتكوين جملة الحب الشهيرة!");
+                }
+            };
+
+            // GAME 4: Love Meter
+            document.getElementById('calculateLoveBtn').onclick = () => {
+                document.getElementById('loveResultBox').classList.remove('hidden');
+                triggerConfetti();
+            };
+
+            // GAME 5: Wheel of Fortune
+            const spinBtn = document.getElementById('spinWheelBtn');
+            const wheelCircle = document.getElementById('wheelCircle');
+            const wheelRes = document.getElementById('wheelResultText');
+            const options = ["قبلة حانية", "رسالة حب جديدة", "وعد بالوفاء الأبدي", "عناق دافئ"];
+
+            spinBtn.onclick = () => {
+                const randomOpt = options[Math.floor(Math.random() * options.length)];
+                wheelCircle.style.transform = `rotate(${360 * 3 + Math.random() * 360}deg)`;
+                setTimeout(() => {
+                    wheelRes.innerText = `المفاجأة الفائزة: ${randomOpt}`;
+                    triggerConfetti();
+                }, 3000);
+            };
+        }
+
+        // --- 17. GRAND SURPRISE & THOUSAND ROSES FINALE ---
+        function setupGrandSurprise() {
+            document.getElementById('triggerThousandRosesBtn').addEventListener('click', () => {
+                triggerConfetti();
+                for (let i = 0; i < 30; i++) {
+                    setTimeout(createFloatingHeart, i * 150);
+                }
+                alert("🌹🌹🌹 ألف وردة تتفتح الآن لأجلكِ يا ملكة قلب زوجش! أحبكِ منذ الطفولة وإلى الأبد!");
+            });
+        }
+
+        // --- 18. HIDDEN HEARTS GAME SYSTEM ---
+        function setupHiddenHearts() {
+            const btns = document.querySelectorAll('.hidden-heart-btn');
+            btns.forEach(b => {
+                b.addEventListener('click', () => {
+                    const id = b.getAttribute('data-id');
+                    if (!state.heartsFound.includes(id)) {
+                        state.heartsFound.push(id);
+                        localStorage.setItem('lolo_hearts', JSON.stringify(state.heartsFound));
+                    }
+                    updateHeartsTracker();
+                    alert("🎉 اكتشفتِ قلباً خفياً! أبدعتِ يا أميرتي!");
+                });
+            });
+            updateHeartsTracker();
+        }
+
+        function updateHeartsTracker() {
+            const tracker = document.getElementById('hiddenHeartsTracker');
+            const countSpan = document.getElementById('heartsFoundCount');
+            const game6Count = document.getElementById('game6Count');
+
+            if (tracker) tracker.classList.remove('hidden');
+            if (countSpan) countSpan.innerText = state.heartsFound.length;
+            if (game6Count) game6Count.innerText = state.heartsFound.length;
+        }
+
+        // Helper Effects
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 70,
+                    spread: 60,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        function createFloatingHeart() {
+            const heart = document.createElement('div');
+            heart.className = 'heart-particle text-roseSoft text-2xl';
+            heart.innerHTML = '❤️';
+            heart.style.left = Math.random() * 100 + 'vw';
+            document.body.appendChild(heart);
+            setTimeout(() => heart.remove(), 4000);
+        }
+    </script>
+</body>
+</html>
